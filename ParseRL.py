@@ -1,6 +1,8 @@
 import sys
 import os
-import cv2 
+import cv2
+import numpy as np
+from tesserocr import PyTessBaseAPI
 
 FRAMES_PER_SECOND = 60
 SECONDS_PER_CAPTURE = 15
@@ -14,22 +16,45 @@ def FrameCapture(basePath, weekNum):
         print("{0} doesn't exist, creating it...".format(gameweekPath))
         os.mkdir(gameweekPath)
 
+    # scoreboard location based on 1280 x 800 image
+    # TODO: maybe make this a percentage so it can adapt to different resolutions?
+    scoreboard_UpperLeft = ( 340, 195 )
+    scoreboard_LowerRight = ( 1165, 520 )
+    allWhite = cv2.imread("masks/allWhite.jpg")
+    scoreboardMask = cv2.rectangle(allWhite, scoreboard_UpperLeft, scoreboard_LowerRight, 0, -1, 4)
+    scoreboardMask = cv2.bitwise_not(scoreboardMask)
+    # cv2.imwrite("scoreboardMask.jpg", scoreboardMask)
+    # intermissionTemplate = cv2.imread("masks/intermission.jpg")
+
+    thresholdLower = ( 0, 0, 0, 0 )
+    thresholdUpper = ( 179, 148, 174, 0 )
     # Path to video file (/basePath/with/gameweek#.mp4)
     vidObj = cv2.VideoCapture(gameweekPath + ".mp4") 
     # Used as counter variable 
-    count = 0
+    count = 108
     # checks whether frames were extracted 
     success = 1
-    while success: 
+    while success and count < 110:
+        print("----------------------------------------------------------------------------------")
+        print("Processing frame number {0} ({1})".format(count, SECONDS_PER_CAPTURE*1000*count))
         # skip ahead by specified number of seconds
         vidObj.set(cv2.CAP_PROP_POS_MSEC, SECONDS_PER_CAPTURE*1000*count)
-        # vidObj object calls read 
-        # function extract frames
+        # read the image at specified frame
         success, image = vidObj.read() 
-        # Saves the frames with frame-count 
+        # save the image
         if success:
-            cv2.imwrite(gameweekPath + os.path.sep + "frame%d.jpg" % count, image)
+            maskImg = cv2.bitwise_and(image, scoreboardMask)
+            thresholdImg = cv2.inRange(maskImg, thresholdLower, thresholdUpper)
+            # cv2.imshow("matchResult", matchResult8)
+            cv2.imwrite(gameweekPath + os.path.sep + "%04dframe.jpg" % count, thresholdImg)
+            with PyTessBaseAPI() as api:
+                api.SetImageFile(gameweekPath + os.path.sep + "%04dframe.jpg" % count)
+                print("TEXT:")
+                print(api.GetUTF8Text())
+                print("CONFIDENCES:")
+                print(api.AllWordConfidences())
         count += 1
+        print("----------------------------------------------------------------------------------")
 
 def UsageError():
     print("USAGE: `python3 ParseRL.py <videoPath> <weekNum>`")
@@ -45,13 +70,9 @@ if __name__ == '__main__':
         UsageError()
 
     basePath = str(sys.argv[1])
+    weekNum = str(sys.argv[2])
     if not basePath.endswith(os.path.sep):
         basePath = basePath + os.path.sep
-    try:
-        weekNum = int(sys.argv[2])
-    except ValueError:
-        print("ERROR: second parameter needs to be an integer")
-        UsageError()
     
     print("basePath: {0}, weekNum: {1}".format(basePath, weekNum))
     # Calling the function 
