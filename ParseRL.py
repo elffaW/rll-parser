@@ -31,10 +31,10 @@ def FrameCapture(basePath, weekNum):
     # Path to video file (/basePath/with/gameweek#.mp4)
     vidObj = cv2.VideoCapture(gameweekPath + ".mp4") 
     # Used as counter variable 
-    count = 108
+    count = 0
     # checks whether frames were extracted 
     success = 1
-    while success and count < 110:
+    while success: # and count < 110:
         print("----------------------------------------------------------------------------------")
         print("Processing frame number {0} ({1})".format(count, SECONDS_PER_CAPTURE*1000*count))
         # skip ahead by specified number of seconds
@@ -43,16 +43,17 @@ def FrameCapture(basePath, weekNum):
         success, image = vidObj.read() 
         # save the image
         if success:
-            maskImg = cv2.bitwise_and(image, scoreboardMask)
-            thresholdImg = cv2.inRange(maskImg, thresholdLower, thresholdUpper)
-            # cv2.imshow("matchResult", matchResult8)
-            cv2.imwrite(gameweekPath + os.path.sep + "%04dframe.jpg" % count, thresholdImg)
-            with PyTessBaseAPI() as api:
-                api.SetImageFile(gameweekPath + os.path.sep + "%04dframe.jpg" % count)
-                print("TEXT:")
-                print(api.GetUTF8Text())
-                print("CONFIDENCES:")
-                print(api.AllWordConfidences())
+            cv2.imwrite(gameweekPath + os.path.sep + "%04dframe.jpg" % count, image)
+            # maskImg = cv2.bitwise_and(image, scoreboardMask)
+            # thresholdImg = cv2.inRange(maskImg, thresholdLower, thresholdUpper)
+            # # cv2.imshow("matchResult", matchResult8)
+            # cv2.imwrite(gameweekPath + os.path.sep + "%04dframe.jpg" % count, thresholdImg)
+            # with PyTessBaseAPI() as api:
+            #     api.SetImageFile(gameweekPath + os.path.sep + "%04dframe.jpg" % count)
+            #     print("TEXT:")
+            #     print(api.GetUTF8Text())
+            #     print("CONFIDENCES:")
+            #     print(api.AllWordConfidences())
         count += 1
         print("----------------------------------------------------------------------------------")
 
